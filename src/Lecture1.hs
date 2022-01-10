@@ -115,6 +115,7 @@ string.
 subString :: Int -> Int -> [a] -> [a]
 subString start end = take (end - max 0 start + 1) . drop start
 
+
 {- | Write a function that takes a String — space separated numbers,
 and finds a sum of the numbers inside this string.
 
