@@ -143,9 +143,9 @@ and lower than 6 elements (4, 5, 6, 7, 8 and 9).
 lowerAndGreater :: (Show a, Ord a) => a -> [a] -> [Char]
 lowerAndGreater n list =
     show n ++ " is greater than " ++ show lower ++ " elements and lower than " ++ show greater ++ " elements"
-    where (lower, greater) = go [] [] list
-          go lower' greater'[] = (length  lower', length greater')
+    where (lower, greater) = go 0 0 list :: (Int, Int)
+          go lower' greater'[] = (lower', greater')
           go lower' greater'(x:xs)
-              | x < n = go (x:lower') greater' xs
-              | x > n = go lower' (x:greater') xs
+              | x < n = go (lower' + 1) greater' xs
+              | x > n = go lower' (greater' + 1) xs
               | otherwise = go lower' greater' xs
