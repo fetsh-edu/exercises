@@ -56,6 +56,11 @@ Explanation: @sumOfSquares 3 4@ should be equal to @9 + 16@ and this
 is 25.
 -}
 -- DON'T FORGET TO SPECIFY THE TYPE IN HERE
+
+-- I am actually not sure why I've decided not to use `x^2 + y^2`
+-- Maybe because of the "Defaulting the following constraints to type ‘Integer’"
+-- warning. First I've tried to constraint the types with `where power = 2 :: Int` 
+-- and Boom! there is a list, a map and a sum ¯\_(ツ)_/¯
 sumOfSquares :: Int -> Int -> Int
 sumOfSquares x y = sum $ map (^ power) [x, y]
     where power = 2 :: Int
@@ -87,9 +92,11 @@ Try to use local variables (either let-in or where) to implement this
 function.
 -}
 
+-- Is it ok to ignore "Pattern match(es) are non-exhaustive"
+-- if its guarantied that it's exhaustive like in this case?
 minmax :: (Num a, Ord a) => a -> a -> a -> a
 minmax x y z = max' - min'
-    where [min', _,max'] = sort [x, y, z]
+    where [min', _, max'] = sort [x, y, z]
 
 {- | Implement a function that takes a string, start and end positions
 and returns a substring of a given string from the start position to
@@ -134,18 +141,21 @@ and lower than 6 elements (4, 5, 6, 7, 8 and 9).
 
 🕯 HINT: Use recursion to implement this function.
 -}
--- lowerAndGreater :: (Show a, Ord a) => a -> [a] -> [Char]
--- lowerAndGreater n list =
---     show n ++ " is greater than " ++ show lower ++ " elements and lower than " ++ show greater ++ " elements"
---     where lower = length $ [x | x <- list, x < n ]
---           greater = length $ [x | x <- list, x > n ]
 
+-- First take, where I traverse a list ~ three(?) times
+lowerAndGreater' :: (Show a, Ord a) => a -> [a] -> [Char]
+lowerAndGreater' n list =
+    show n ++ " is greater than " ++ show lower ++ " elements and lower than " ++ show greater ++ " elements"
+    where lower = length $ [x | x <- list, x < n ]
+          greater = length $ [x | x <- list, x > n ]
+
+-- Second take
 lowerAndGreater :: (Show a, Ord a) => a -> [a] -> [Char]
 lowerAndGreater n list =
     show n ++ " is greater than " ++ show lower ++ " elements and lower than " ++ show greater ++ " elements"
     where (lower, greater) = go 0 0 list :: (Int, Int)
-          go lower' greater'[] = (lower', greater')
-          go lower' greater'(x:xs)
+          go lower' greater' [] = (lower', greater')
+          go lower' greater' (x:xs)
               | x < n = go (lower' + 1) greater' xs
               | x > n = go lower' (greater' + 1) xs
               | otherwise = go lower' greater' xs
