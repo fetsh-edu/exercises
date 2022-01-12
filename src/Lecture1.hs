@@ -141,6 +141,14 @@ and lower than 6 elements (4, 5, 6, 7, 8 and 9).
 🕯 HINT: Use recursion to implement this function.
 -}
 
+-- First take, where I traverse a list ~ three(?) times
+lowerAndGreater' :: (Show a, Ord a) => a -> [a] -> [Char]
+lowerAndGreater' n list =
+    show n ++ " is greater than " ++ show lower ++ " elements and lower than " ++ show greater ++ " elements"
+    where lower = length $ [x | x <- list, x < n ]
+          greater = length $ [x | x <- list, x > n ]
+
+-- Second take
 lowerAndGreater :: (Show a, Ord a) => a -> [a] -> [Char]
 lowerAndGreater n list =
     show n ++ " is greater than " ++ show lower ++ " elements and lower than " ++ show greater ++ " elements"
