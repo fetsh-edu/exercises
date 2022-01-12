@@ -39,6 +39,11 @@ module Lecture2
     , eval
     , constantFolding
     ) where
+import Data.Foldable (Foldable(foldl'))
+import Data.Char (isSpace)
+import Data.List (sort, minimumBy, maximumBy)
+import Data.Function (on)
+
 
 {- | Implement a function that finds a product of all the numbers in
 the list. But implement a lazier version of this function: if you see
@@ -48,7 +53,11 @@ zero, you can stop calculating product and return 0 immediately.
 84
 -}
 lazyProduct :: [Int] -> Int
-lazyProduct = error "TODO"
+lazyProduct = go 1
+    where
+      go result [] = result
+      go _ (0:_) = 0
+      go result (x:xs) = go (result * x) xs
 
 {- | Implement a function that duplicates every element in the list.
 
@@ -58,7 +67,7 @@ lazyProduct = error "TODO"
 "ccaabb"
 -}
 duplicate :: [a] -> [a]
-duplicate = error "TODO"
+duplicate = concatMap (replicate 2)
 
 {- | Implement function that takes index and a list and removes the
 element at the given position. Additionally, this function should also
@@ -70,7 +79,44 @@ return the removed element.
 >>> removeAt 10 [1 .. 5]
 (Nothing,[1,2,3,4,5])
 -}
-removeAt = error "TODO"
+
+-- Bad
+removeAt' :: (Eq a, Num a) => a -> [b] -> (Maybe b, [b])
+removeAt' ind list = (rElem, reverse rList)
+    where (_, rElem, rList) = foldl' foldF (-1, Nothing, []) list
+          foldF (c, mEl, rL) el = if (c + 1) == ind
+                             then (c + 1, Just el, rL)
+                             else (c + 1, mEl, el:rL)
+
+-- Still bad, as we are traversing the list three times I belive
+removeAt'' :: Int -> [b] -> (Maybe b, [b])
+removeAt'' ind list = (list !? ind, take ind list ++ drop (ind + 1) list)
+
+(!?) :: [a] -> Int -> Maybe a
+xs !? n
+  | n < 0     = Nothing
+  | otherwise = foldr (\x r k -> case k of
+                                   0 -> Just x
+                                   _ -> r (k-1)) (const Nothing) xs n
+
+-- Ok, let's try recursion. Well it's the same as first foldl'
+-- but with intermidiate list appending instead of reversing result
+-- so Still bad
+removeAt''' :: Int -> [b] -> (Maybe b, [b])
+removeAt''' = go 0 Nothing []
+  where go _ resEl resLi _ [] = (resEl, resLi)
+        go c _ resLi ind (x:xs)
+          | c == ind = (Just x, resLi ++ xs)
+          | otherwise = go (c + 1) Nothing (resLi ++ [x]) ind xs
+
+
+removeAt :: Int -> [a] -> (Maybe a, [a])
+removeAt ind list
+    | ind < 0 = (Nothing, list)
+    | otherwise = case splitAt ind list of
+        (first, []) -> (Nothing, first)
+        (first, x:xs) -> (Just x, first ++ xs)
+
 
 {- | Write a function that takes a list of lists and returns only
 lists of even lengths.
@@ -81,7 +127,8 @@ lists of even lengths.
 ♫ NOTE: Use eta-reduction and function composition (the dot (.) operator)
   in this function.
 -}
-evenLists = error "TODO"
+evenLists :: [[a]] -> [[a]]
+evenLists = filter (even . length)
 
 {- | The @dropSpaces@ function takes a string containing a single word
 or number surrounded by spaces and removes all leading and trailing
@@ -97,7 +144,8 @@ spaces.
 
 🕯 HINT: look into Data.Char and Prelude modules for functions you may use.
 -}
-dropSpaces = error "TODO"
+dropSpaces :: [Char] -> [Char]
+dropSpaces = takeWhile (not . isSpace) . dropWhile isSpace
 
 {- |
 
@@ -157,7 +205,40 @@ data Knight = Knight
     , knightEndurance :: Int
     }
 
-dragonFight = error "TODO"
+data Color = Red | Black | Green
+
+data Dragon = Dragon
+    { dragonColor  :: Color
+    , dragonHealth :: Int
+    , dragonAttack :: Int
+    }
+
+data Reword = Reward
+    { expirience   :: Int
+    , gold         :: Bool
+    , treasure     :: Bool
+    } deriving (Show)
+
+data FightResult
+    = KnightWins Reword
+    | DragonWins
+    | KnightRetreats
+    deriving (Show)
+
+dragonReward :: Dragon -> Reword
+dragonReward (Dragon Red _ _) = Reward 100 True True
+dragonReward (Dragon Black _ _) = Reward 150 True True
+dragonReward (Dragon Green _ _) = Reward 250 True False
+
+dragonFight :: Knight -> Dragon -> FightResult
+dragonFight knight dragon =
+    let toKillaDragon = fromIntegral (dragonHealth dragon) / fromIntegral (knightAttack knight)
+        toKillaKnight = fromIntegral (knightHealth knight) / fromIntegral (dragonAttack dragon)
+        knightWins = (toKillaDragon, KnightWins (dragonReward dragon))
+        dragonWins = (10 * toKillaKnight, DragonWins)
+        wagonWills = (fromIntegral (knightEndurance knight) :: Double, KnightRetreats)
+        result = snd $ minimumBy (compare `on` fst) [knightWins, dragonWins, wagonWills]
+    in result
 
 ----------------------------------------------------------------------------
 -- Challenges
@@ -178,7 +259,12 @@ False
 True
 -}
 isIncreasing :: [Int] -> Bool
-isIncreasing = error "TODO"
+isIncreasing [] = True
+isIncreasing [_] = True
+isIncreasing [x,y] = y > x
+isIncreasing (x:rest@(y:_))
+    | y < x = False
+    | otherwise = isIncreasing rest
 
 {- | Implement a function that takes two lists, sorted in the
 increasing order, and merges them into new list, also sorted in the
@@ -191,7 +277,11 @@ verify that.
 [1,2,3,4,7]
 -}
 merge :: [Int] -> [Int] -> [Int]
-merge = error "TODO"
+merge a [] = a
+merge [] b = b
+merge f@(a:as) s@(b:bs)
+    | a < b = a : merge as s
+    | otherwise = b : merge f bs
 
 {- | Implement the "Merge Sort" algorithm in Haskell. The @mergeSort@
 function takes a list of numbers and returns a new list containing the
@@ -208,7 +298,10 @@ The algorithm of merge sort is the following:
 [1,2,3]
 -}
 mergeSort :: [Int] -> [Int]
-mergeSort = error "TODO"
+mergeSort [] = []
+mergeSort [x] = [x]
+mergeSort xs = merge (mergeSort left) (mergeSort right)
+    where (left, right) = splitAt (length xs `div` 2) xs
 
 
 {- | Haskell is famous for being a superb language for implementing
@@ -261,7 +354,14 @@ data EvalError
 It returns either a successful evaluation result or an error.
 -}
 eval :: Variables -> Expr -> Either EvalError Int
-eval = error "TODO"
+eval _ (Lit i) = Right i
+eval vars (Var s) = maybeToEither (VariableNotFound s) (lookup s vars)
+eval vars (Add e1 e2) = (+) <$> eval vars e1 <*> eval vars e2
+
+
+maybeToEither :: a -> Maybe b -> Either a b
+maybeToEither _ (Just b) = Right b
+maybeToEither a Nothing = Left a
 
 {- | Compilers also perform optimizations! One of the most common
 optimizations is "Constant Folding". It performs arithmetic operations
@@ -284,5 +384,41 @@ x + 45 + y
 Write a function that takes and expression and performs "Constant
 Folding" optimization on the given expression.
 -}
+
+-- First take. It works but isn't pretty
+constantFolding' :: Expr -> Expr
+constantFolding' e = buildExpr' lit vars
+    where (lit, vars) = case extractVars' e of
+            (0, []) -> (Lit 0, [])
+            (0, x:xs) -> (x, xs)
+            (i, xs) -> (Lit i, xs)
+
+extractVars' :: Expr -> (Int, [Expr])
+extractVars' (Lit i) = (i, [])
+extractVars' var@(Var _) = (0, [var])
+extractVars' (Add e1 e2) = (fst res1 + fst res2, snd res1 ++ snd res2)
+  where res1 = extractVars' e1
+        res2 = extractVars' e2
+
+buildExpr' :: Expr -> [Expr] -> Expr
+buildExpr' e1 [] = e1
+buildExpr' e1 (e2:es) = Add e1 (buildExpr' e2 es)
+
+
+-- Second take. Still works, is prettier (a bit), but feels wrong anyway.
 constantFolding :: Expr -> Expr
-constantFolding = error "TODO"
+constantFolding e = lit `add` vars
+    where (lit, vars) = extractVars e
+
+extractVars :: Expr -> (Expr, Expr)
+extractVars (Lit i) = (Lit i, Lit 0)
+extractVars var@(Var _) = (Lit 0, var)
+extractVars (Add e1 e2) = (fst res1 `add` fst res2, snd res1 `add` snd res2)
+  where res1 = extractVars e1
+        res2 = extractVars e2
+
+add :: Expr -> Expr -> Expr
+Lit 0 `add` a = a
+b `add` Lit 0 = b
+Lit a `add` Lit b = Lit (a + b)
+x `add` b = Add x b
