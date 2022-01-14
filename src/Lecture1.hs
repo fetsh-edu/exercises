@@ -92,7 +92,9 @@ function.
 -- if its guarantied that it's exhaustive like in this case?
 minmax :: (Num a, Ord a) => a -> a -> a -> a
 minmax x y z = max' - min'
-    where [min', _, max'] = sort [x, y, z]
+    where (min', max') = case sort [x, y, z] of 
+            [mn, _, mx] -> (mn, mx)
+            _ -> error "unreachable"
 
 {- | Implement a function that takes a string, start and end positions
 and returns a substring of a given string from the start position to
@@ -111,7 +113,7 @@ string.
 -}
 
 subString :: Int -> Int -> [a] -> [a]
-subString start end = drop start . take (end + 1)
+subString start end = take (end - max 0 start + 1) . drop start
 
 {- | Write a function that takes a String — space separated numbers,
 and finds a sum of the numbers inside this string.
@@ -138,14 +140,6 @@ and lower than 6 elements (4, 5, 6, 7, 8 and 9).
 🕯 HINT: Use recursion to implement this function.
 -}
 
--- First take, where I traverse a list ~ three(?) times
-lowerAndGreater' :: (Show a, Ord a) => a -> [a] -> [Char]
-lowerAndGreater' n list =
-    show n ++ " is greater than " ++ show lower ++ " elements and lower than " ++ show greater ++ " elements"
-    where lower = length $ [x | x <- list, x < n ]
-          greater = length $ [x | x <- list, x > n ]
-
--- Second take
 lowerAndGreater :: (Show a, Ord a) => a -> [a] -> [Char]
 lowerAndGreater n list =
     show n ++ " is greater than " ++ show lower ++ " elements and lower than " ++ show greater ++ " elements"
