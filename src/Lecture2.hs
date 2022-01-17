@@ -221,22 +221,22 @@ data Dragon = Dragon
     , dragonAttack :: Int
     }
 
-data Reword = Reward
-    { expirience   :: Int
-    , gold         :: Bool
+data Reward = Reward
+    { experience   :: Int
+    , gold         :: Int
     , treasure     :: Bool
     } deriving (Show)
 
 data FightResult
-    = KnightWins Reword
+    = KnightWins Reward
     | DragonWins
     | KnightRetreats
     deriving (Show)
 
-dragonReward :: Dragon -> Reword
-dragonReward (Dragon Red _ _) = Reward 100 True True
-dragonReward (Dragon Black _ _) = Reward 150 True True
-dragonReward (Dragon Green _ _) = Reward 250 True False
+dragonReward :: Dragon -> Reward
+dragonReward (Dragon Red _ _) = Reward 100 20 True
+dragonReward (Dragon Black _ _) = Reward 150 30 True
+dragonReward (Dragon Green _ _) = Reward 250 40 False
 
 dragonFight :: Knight -> Dragon -> FightResult
 dragonFight knight dragon =
@@ -311,7 +311,7 @@ The algorithm of merge sort is the following:
 
 -- First take.
 -- I think there should be a way to not to use `length` here
--- but I couldn't find one yet. 
+-- but I couldn't find one yet.
 --mergeSort0 :: Ord a => [a] -> [a]
 mergeSort0 :: [Int] -> [Int]
 mergeSort0 [] = []
