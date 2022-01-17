@@ -270,7 +270,7 @@ False
 True
 -}
 
-isIncreasing :: Ord a => [a] -> Bool
+isIncreasing :: [Int] -> Bool
 isIncreasing [] = True
 isIncreasing [_] = True
 isIncreasing [x,y] = y > x
@@ -289,7 +289,8 @@ verify that.
 [1,2,3,4,7]
 -}
 
-merge :: Ord a => [a] -> [a] -> [a]
+--merge :: Ord a => [a] -> [a] -> [a]
+merge :: [Int] -> [Int] -> [Int]
 merge a [] = a
 merge [] b = b
 merge f@(a:as) s@(b:bs)
@@ -311,27 +312,31 @@ The algorithm of merge sort is the following:
 [1,2,3]
 -}
 
---mergeSort :: Ord a => [a] -> [a]
---mergeSort [] = []
---mergeSort [x] = [x]
---mergeSort xs = merge (mergeSort left) (mergeSort right)
---    where (left, right) = splitAt (length xs `div` 2) xs
-
+-- First take.
 -- I think there should be a way to not to use `length` here
--- but I couldn't find one yet. Maybe something along the line
--- of splitting the list into chunks of (2?)
-mergeSort :: Ord a => [a] -> [a]
-mergeSort []  = []
-mergeSort [x] = [x]
-mergeSort xs = foldr (merge . sort2) [] $ chunkList 2 xs
+-- but I couldn't find one yet. 
+--mergeSort0 :: Ord a => [a] -> [a]
+mergeSort0 :: [Int] -> [Int]
+mergeSort0 [] = []
+mergeSort0 [x] = [x]
+mergeSort0 xs = merge (mergeSort0 left) (mergeSort0 right)
+    where (left, right) = splitAt (length xs `div` 2) xs
 
-sort2 :: Ord a => [a] -> [a]
+-- Maybe something along the line of splitting the list into chunks of (2?)
+-- The thing is I have no idea whether it's more efficient or less,
+-- And it's a different algorithm, although it sorts and merges :)
+mergeSort :: [Int] -> [Int]
+mergeSort [] = []
+mergeSort [x] = [x]
+mergeSort xs = (foldr (merge . sort2) [] . chunkList 2) xs
+
+sort2 :: [Int] -> [Int]
 sort2 [] = []
 sort2 [x] = [x]
 sort2 [x,y] | x < y = [x,y] | otherwise = [y,x]
 sort2 _ = error "Unreachable"
 
-chunkList :: Int -> [a] -> [[a]]
+chunkList :: Int -> [Int] -> [[Int]]
 chunkList _ [] = []
 chunkList n xs = as : chunkList n bs where (as,bs) = splitAt n xs
 
