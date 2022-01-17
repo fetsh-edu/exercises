@@ -41,7 +41,7 @@ module Lecture2
     ) where
 import Data.Foldable (Foldable(foldl'))
 import Data.Char (isSpace)
-import Data.List (sort, minimumBy, maximumBy)
+import Data.List (minimumBy)
 import Data.Function (on)
 
 
@@ -80,17 +80,25 @@ return the removed element.
 (Nothing,[1,2,3,4,5])
 -}
 
--- Bad
-removeAt' :: (Eq a, Num a) => a -> [b] -> (Maybe b, [b])
-removeAt' ind list = (rElem, reverse rList)
+-- My first intuition was to use fold. But using foldl' left me with a list reversed,
+-- and using foldr while giving result list in order was counting index from the
+-- end. I could start with last index, but in order to do so i would have to `length`
+-- the list beforehand. I think I don't entirely get folds yet :)
+removeAt1 :: (Eq a, Num a) => a -> [b] -> (Maybe b, [b])
+removeAt1 ind list = (rElem, reverse rList)
     where (_, rElem, rList) = foldl' foldF (-1, Nothing, []) list
           foldF (c, mEl, rL) el = if (c + 1) == ind
                              then (c + 1, Just el, rL)
                              else (c + 1, mEl, el:rL)
 
--- Still bad, as we are traversing the list three times I belive
-removeAt'' :: Int -> [b] -> (Maybe b, [b])
-removeAt'' ind list = (list !? ind, take ind list ++ drop (ind + 1) list)
+-- Still bad, as we are traversing the list three times I believe in the worst case
+-- once for lookup, once for take and once for drop. But looks nice :)
+removeAt2 :: Int -> [b] -> (Maybe b, [b])
+removeAt2 ind list = (list !? ind, take ind list ++ drop (ind + 1) list)
+
+-- or maybe even...
+removeAt3 :: Int -> [b] -> (Maybe b, [b])
+removeAt3 ind list = (list !? ind, [x | (i,x) <- zip [0..] list, i /= ind])
 
 (!?) :: [a] -> Int -> Maybe a
 xs !? n
@@ -100,16 +108,16 @@ xs !? n
                                    _ -> r (k-1)) (const Nothing) xs n
 
 -- Ok, let's try recursion. Well it's the same as first foldl'
--- but with intermidiate list appending instead of reversing result
--- so Still bad
-removeAt''' :: Int -> [b] -> (Maybe b, [b])
-removeAt''' = go 0 Nothing []
+-- but with intermediate list appending instead of reversing result
+-- so still bad. Even worse I think.
+removeAt4 :: Int -> [b] -> (Maybe b, [b])
+removeAt4 = go 0 Nothing []
   where go _ resEl resLi _ [] = (resEl, resLi)
         go c _ resLi ind (x:xs)
           | c == ind = (Just x, resLi ++ xs)
           | otherwise = go (c + 1) Nothing (resLi ++ [x]) ind xs
 
-
+-- This one I like )
 removeAt :: Int -> [a] -> (Maybe a, [a])
 removeAt ind list
     | ind < 0 = (Nothing, list)
@@ -258,7 +266,8 @@ False
 >>> isIncreasing [1 .. 10]
 True
 -}
-isIncreasing :: [Int] -> Bool
+
+isIncreasing :: Ord a => [a] -> Bool
 isIncreasing [] = True
 isIncreasing [_] = True
 isIncreasing [x,y] = y > x
@@ -276,7 +285,8 @@ verify that.
 >>> merge [1, 2, 4] [3, 7]
 [1,2,3,4,7]
 -}
-merge :: [Int] -> [Int] -> [Int]
+
+merge :: Ord a => [a] -> [a] -> [a]
 merge a [] = a
 merge [] b = b
 merge f@(a:as) s@(b:bs)
@@ -297,12 +307,30 @@ The algorithm of merge sort is the following:
 >>> mergeSort [3, 1, 2]
 [1,2,3]
 -}
-mergeSort :: [Int] -> [Int]
-mergeSort [] = []
-mergeSort [x] = [x]
-mergeSort xs = merge (mergeSort left) (mergeSort right)
-    where (left, right) = splitAt (length xs `div` 2) xs
 
+--mergeSort :: Ord a => [a] -> [a]
+--mergeSort [] = []
+--mergeSort [x] = [x]
+--mergeSort xs = merge (mergeSort left) (mergeSort right)
+--    where (left, right) = splitAt (length xs `div` 2) xs
+
+-- I think there should be a way to not to use `length` here
+-- but I couldn't find one yet. Maybe something along the line
+-- of splitting the list into chunks of (2?)
+mergeSort :: Ord a => [a] -> [a]
+mergeSort []  = []
+mergeSort [x] = [x]
+mergeSort xs = foldr (merge . sort2) [] $ chunkList 2 xs
+
+sort2 :: Ord a => [a] -> [a]
+sort2 [] = []
+sort2 [x] = [x]
+sort2 [x,y] | x < y = [x,y] | otherwise = [y,x]
+sort2 _ = error "Unreachable"
+
+chunkList :: Int -> [a] -> [[a]]
+chunkList _ [] = []
+chunkList n xs = as : chunkList n bs where (as,bs) = splitAt n xs
 
 {- | Haskell is famous for being a superb language for implementing
 compilers and interpeters to other programming languages. In the next
