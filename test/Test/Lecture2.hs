@@ -69,28 +69,28 @@ lecture2Normal = describe "Normal" $ do
 lecture2Hard :: Spec
 lecture2Hard = describe "Hard" $ do
     describe "isIncreasing" $ do
-        it "Empty list" $ isIncreasing [] `shouldBe` True
-        it "Singleton list" $ isIncreasing [5] `shouldBe` True
-        it "Two elements sorted" $ isIncreasing [1, 2] `shouldBe` True
-        it "Two elements chaos" $ isIncreasing [2, 1] `shouldBe` False
-        it "Big range" $ isIncreasing [1 .. 1000] `shouldBe` True
-        it "First element wrong" $ isIncreasing (100 : [1 .. 5]) `shouldBe` False
-        it "Last element wrong" $ isIncreasing ([1 .. 5] ++ [0]) `shouldBe` False
-        it "Lazy: doesn't crash" $ isIncreasing [10, 5, error "Oops!"] `shouldBe` False
-        it "Lazy: works on infinite lists" $ isIncreasing (10 : [0 .. ]) `shouldBe` False
+        it "Empty list" $ isIncreasing ([] :: [Int]) `shouldBe` True
+        it "Singleton list" $ isIncreasing ([5] :: [Int]) `shouldBe` True
+        it "Two elements sorted" $ isIncreasing ([1, 2] :: [Int]) `shouldBe` True
+        it "Two elements chaos" $ isIncreasing ([2, 1] :: [Int]) `shouldBe` False
+        it "Big range" $ isIncreasing ([1 .. 1000] :: [Int]) `shouldBe` True
+        it "First element wrong" $ isIncreasing (100 : ([1 .. 5] :: [Int])) `shouldBe` False
+        it "Last element wrong" $ isIncreasing ([1 .. 5] ++ ([0] :: [Int])) `shouldBe` False
+        it "Lazy: doesn't crash" $ isIncreasing ([10, 5, error "Oops!"] :: [Int]) `shouldBe` False
+        it "Lazy: works on infinite lists" $ isIncreasing (10 : ([0 .. ] :: [Int])) `shouldBe` False
 
         it "isIncreasing (sort xs) ≡ True" $ hedgehog $ do
             xs <- forAll $ Gen.list (Range.linear 0 10) (Gen.int Range.linearBounded)
             assert $ isIncreasing (sort xs)
 
     describe "merge" $ do
-        it "Two empty" $ merge [] [] `shouldBe` []
-        it "Left empty" $ merge [] [1, 2] `shouldBe` [1, 2]
-        it "Right empty" $ merge [3, 4] [] `shouldBe` [3, 4]
-        it "Two single" $ merge [5] [10] `shouldBe` [5, 10]
-        it "Two single, 2" $ merge [10] [5] `shouldBe` [5, 10]
-        it "Singleton and range" $ merge [3] [1 .. 5] `shouldBe` [1, 2, 3, 3, 4, 5]
-        it "Odd and even" $ merge [0, 2 .. 100] [1, 3 .. 100] `shouldBe` [0 .. 100]
+        it "Two empty" $ merge [] [] `shouldBe` ([] :: [Int])
+        it "Left empty" $ merge [] [1, 2] `shouldBe` ([1, 2] :: [Int])
+        it "Right empty" $ merge [3, 4] [] `shouldBe` ([3, 4] :: [Int])
+        it "Two single" $ merge [5] [10] `shouldBe` ([5, 10] :: [Int])
+        it "Two single, 2" $ merge [10] [5] `shouldBe` ([5, 10] :: [Int])
+        it "Singleton and range" $ merge [3] [1 .. 5] `shouldBe` ([1, 2, 3, 3, 4, 5] :: [Int])
+        it "Odd and even" $ merge [0, 2 .. 100] [1, 3 .. 100] `shouldBe` ([0 .. 100] :: [Int])
 
         it "merge (sort xs) (sort ys) ≡ sort (xs ++ ys)" $ hedgehog $ do
             xs <- forAll $ Gen.list (Range.linear 0 10) (Gen.int Range.linearBounded)
@@ -98,11 +98,11 @@ lecture2Hard = describe "Hard" $ do
             merge (sort xs) (sort ys) === sort (xs ++ ys)
 
     describe "mergeSort" $ do
-        it "Empty list" $ mergeSort [] `shouldBe` []
-        it "Singleton list" $ mergeSort [5] `shouldBe` [5]
-        it "Already sorted" $ mergeSort [1 .. 5] `shouldBe` [1 .. 5]
-        it "Reversed" $ mergeSort [10, 9 .. 0] `shouldBe` [0 .. 10]
-        it "Mix order" $ mergeSort [3, 1, 7, 5, 2] `shouldBe` [1, 2, 3, 5, 7]
+        it "Empty list" $ mergeSort [] `shouldBe` ([] :: [Int])
+        it "Singleton list" $ mergeSort [5] `shouldBe` ([5] :: [Int])
+        it "Already sorted" $ mergeSort [1 .. 5] `shouldBe` ([1 .. 5] :: [Int])
+        it "Reversed" $ mergeSort [10, 9 .. 0] `shouldBe` ([0 .. 10] :: [Int])
+        it "Mix order" $ mergeSort [3, 1, 7, 5, 2] `shouldBe` ([1, 2, 3, 5, 7] :: [Int])
 
         it "mergeSort ≡ sort" $ hedgehog $ do
             xs <- forAll $ Gen.list (Range.linear 0 10) (Gen.int Range.linearBounded)
