@@ -206,10 +206,12 @@ You're free to define any helper functions.
        treasure besides gold (if you already haven't done this).
 -}
 
--- some help in the beginning ;)
+newtype Health = Health Int deriving Show
+newtype Attack = Attack Int deriving Show
+
 data Knight = Knight
-    { knightHealth    :: Int
-    , knightAttack    :: Int
+    { knightHealth    :: Health
+    , knightAttack    :: Attack
     , knightEndurance :: Int
     }
 
@@ -217,15 +219,17 @@ data Color = Red | Black | Green
 
 data Dragon = Dragon
     { dragonColor  :: Color
-    , dragonHealth :: Int
-    , dragonAttack :: Int
+    , dragonHealth :: Health
+    , dragonAttack :: Attack
     }
 
-data Reward = Reward
-    { experience   :: Int
-    , gold         :: Int
-    , treasure     :: Bool
-    } deriving (Show)
+newtype Experience = Experience Int deriving Show
+newtype Gold = Gold Int deriving Show
+
+data Reward
+    = WithTreasure Experience Gold
+    | WithoutTreasure Experience Gold
+    deriving (Show)
 
 data FightResult
     = KnightWins Reward
@@ -234,19 +238,30 @@ data FightResult
     deriving (Show)
 
 dragonReward :: Dragon -> Reward
-dragonReward (Dragon Red _ _) = Reward 100 20 True
-dragonReward (Dragon Black _ _) = Reward 150 30 True
-dragonReward (Dragon Green _ _) = Reward 250 40 False
+dragonReward (Dragon Red _ _) = WithTreasure (Experience 100) (Gold 20)
+dragonReward (Dragon Black _ _) = WithTreasure (Experience 150) (Gold 30)
+dragonReward (Dragon Green _ _) = WithoutTreasure (Experience 250) (Gold 40)
 
+-- This one needs extensive testing...
 dragonFight :: Knight -> Dragon -> FightResult
 dragonFight knight dragon =
-    let toKillaDragon = fromIntegral (dragonHealth dragon) / fromIntegral (knightAttack knight)
-        toKillaKnight = fromIntegral (knightHealth knight) / fromIntegral (dragonAttack dragon)
-        knightWins = (toKillaDragon, KnightWins (dragonReward dragon))
-        dragonWins = (10 * toKillaKnight, DragonWins)
-        wagonWills = (fromIntegral (knightEndurance knight) :: Double, KnightRetreats)
+    let toKillA (Health h) (Attack a) = ceiling (fromIntegral h / (fromIntegral a :: Double))
+        -- how many knight hits needed to kill a Dragon
+        toKillADragon = toKillA (dragonHealth dragon) (knightAttack knight)
+        -- how many knight hits needed to be killed by a Dragon
+        toKillAKnight = toKillA (knightHealth knight) (dragonAttack dragon) * 10
+        knightWins = (toKillADragon, KnightWins (dragonReward dragon))
+        dragonWins = (toKillAKnight, DragonWins)
+        wagonWills = (knightEndurance knight, KnightRetreats)
         result = snd $ minimumBy (compare `on` fst) [knightWins, dragonWins, wagonWills]
     in result
+--    in if toKillADragon < toKillAKnight
+--       then if toKillADragon <= knightEndurance knight
+--            then KnightWins (dragonReward dragon)
+--            else KnightRetreats
+--       else if toKillAKnight <= knightEndurance knight
+--            then DragonWins
+--            else KnightRetreats
 
 ----------------------------------------------------------------------------
 -- Challenges
