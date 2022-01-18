@@ -455,15 +455,13 @@ buildExpr' e1 (e2:es) = Add e1 (buildExpr' e2 es)
 
 -- Second take. Still works, is prettier (a bit), but feels wrong anyway.
 constantFolding :: Expr -> Expr
-constantFolding e = lit `add` vars
-    where (lit, vars) = extractVars e
+constantFolding = uncurry add . spread
 
-extractVars :: Expr -> (Expr, Expr)
-extractVars (Lit i) = (Lit i, Lit 0)
-extractVars var@(Var _) = (Lit 0, var)
-extractVars (Add e1 e2) = (fst res1 `add` fst res2, snd res1 `add` snd res2)
-  where res1 = extractVars e1
-        res2 = extractVars e2
+spread :: Expr -> (Expr, Expr)
+spread (Lit i) = (Lit i, Lit 0)
+spread var@(Var _) = (Lit 0, var)
+spread (Add exp1 exp2) = shloep (spread exp1) (spread exp2)
+  where shloep (e1, e2) (e3, e4) = (e1 `add` e3, e2 `add` e4)
 
 add :: Expr -> Expr -> Expr
 Lit 0 `add` a = a
