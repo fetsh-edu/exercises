@@ -43,6 +43,7 @@ import Data.Foldable (Foldable(foldl'))
 import Data.Char (isSpace)
 import Data.List (minimumBy)
 import Data.Function (on)
+import Data.Bifunctor (bimap)
 
 
 {- | Implement a function that finds a product of all the numbers in
@@ -67,7 +68,9 @@ lazyProduct = go 1
 "ccaabb"
 -}
 duplicate :: [a] -> [a]
-duplicate = concatMap (replicate 2)
+duplicate [] = []
+duplicate (x:xs) = x : x : duplicate xs
+--duplicate = concatMap (replicate 2)
 
 {- | Implement function that takes index and a list and removes the
 element at the given position. Additionally, this function should also
@@ -285,10 +288,7 @@ True
 isIncreasing :: [Int] -> Bool
 isIncreasing [] = True
 isIncreasing [_] = True
-isIncreasing [x,y] = y > x
-isIncreasing (x:rest@(y:_))
-    | y < x = False
-    | otherwise = isIncreasing rest
+isIncreasing (x:rest@(y:_)) = x < y && isIncreasing rest
 
 {- | Implement a function that takes two lists, sorted in the
 increasing order, and merges them into new list, also sorted in the
@@ -305,9 +305,10 @@ verify that.
 merge :: [Int] -> [Int] -> [Int]
 merge a [] = a
 merge [] b = b
-merge f@(a:as) s@(b:bs)
-    | a < b = a : merge as s
-    | otherwise = b : merge f bs
+merge aas@(a:as) bbs@(b:bs)
+    | a < b = a : merge as bbs
+    | a == b = a : b : merge as bs
+    | otherwise = b : merge aas bs
 
 {- | Implement the "Merge Sort" algorithm in Haskell. The @mergeSort@
 function takes a list of numbers and returns a new list containing the
@@ -328,19 +329,21 @@ The algorithm of merge sort is the following:
 -- I think there should be a way to not to use `length` here
 -- but I couldn't find one yet.
 --mergeSort0 :: Ord a => [a] -> [a]
-mergeSort0 :: [Int] -> [Int]
-mergeSort0 [] = []
-mergeSort0 [x] = [x]
-mergeSort0 xs = merge (mergeSort0 left) (mergeSort0 right)
-    where (left, right) = splitAt (length xs `div` 2) xs
+mergeSort :: [Int] -> [Int]
+mergeSort [] = []
+mergeSort [x] = [x]
+mergeSort xs = uncurry merge . bimap mergeSort mergeSort $ split2 [] [] xs
+    where split2 h1 h2 [] = (h1, h2)
+          split2 h1 h2 [x] = (h1, x:h2)
+          split2 h1 h2 (x:y:xs') = split2 (x:h1) (y:h2) xs'
 
 -- Maybe something along the line of splitting the list into chunks of (2?)
 -- The thing is I have no idea whether it's more efficient or less,
 -- And it's a different algorithm, although it sorts and merges :)
-mergeSort :: [Int] -> [Int]
-mergeSort [] = []
-mergeSort [x] = [x]
-mergeSort xs = (foldr (merge . sort2) [] . chunkList 2) xs
+mergeSort1 :: [Int] -> [Int]
+mergeSort1 [] = []
+mergeSort1 [x] = [x]
+mergeSort1 xs = (foldr (merge . sort2) [] . chunkList 2) xs
 
 sort2 :: [Int] -> [Int]
 sort2 [] = []
@@ -406,7 +409,6 @@ eval _ (Lit i) = Right i
 eval vars (Var s) = maybeToEither (VariableNotFound s) (lookup s vars)
 eval vars (Add e1 e2) = (+) <$> eval vars e1 <*> eval vars e2
 
-
 maybeToEither :: a -> Maybe b -> Either a b
 maybeToEither _ (Just b) = Right b
 maybeToEither a Nothing = Left a
@@ -444,7 +446,7 @@ constantFolding' e = buildExpr' lit vars
 extractVars' :: Expr -> (Int, [Expr])
 extractVars' (Lit i) = (i, [])
 extractVars' var@(Var _) = (0, [var])
-extractVars' (Add e1 e2) = (fst res1 + fst res2, snd res1 ++ snd res2)
+extractVars' (Add e1 e2) = bimap (fst res1 +) (snd res1 ++) res2
   where res1 = extractVars' e1
         res2 = extractVars' e2
 
