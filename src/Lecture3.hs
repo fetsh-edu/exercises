@@ -244,9 +244,6 @@ types that can have such an instance.
 -- instance Foldable Reward where
 instance Foldable List1 where
     foldMap f (List1 x xs) = f x <> foldMap f xs
---  First take
---  foldr f acc (List1 x xs) = foldr f (f x acc) xs
---  Second take
     foldr f acc (List1 x xs) = f x (foldr f acc xs)
 
 instance Foldable Treasure where
