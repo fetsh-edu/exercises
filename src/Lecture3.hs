@@ -107,7 +107,7 @@ daysTo el1 el2
           from2 = fromEnum el2
           len = fromEnum (maxBound :: a) + 1
 
--- This version was just funny to write
+-- This version was just fun to write
 daysTo1 :: (Eq a, Bounded a, Enum a) => a -> a -> Int
 daysTo1 d1 d2 = length $ takeWhile (/= d2) (iterate next d1)
 {-
