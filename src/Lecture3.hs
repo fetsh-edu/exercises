@@ -100,14 +100,16 @@ weekday to the second.
 
 -- Using this ["trick"](https://t.me/c/1573945457/940) with `forall`
 -- or we could just use Weekday in types as we already have "days" in
--- function name or even put `7` in place for len :)
+-- function name or even put `7` in place for len in 
+-- otherwise = len + (from2 - from1) :)
 daysTo :: forall a . (Bounded a, Enum a) => a -> a -> Int
 daysTo el1 el2
     | from1 <= from2 = from2 - from1
-    | otherwise = len + (from2 - from1)
+    | otherwise = abs (from2 - minB) + abs (from1 - maxB) + 1
     where from1 = fromEnum el1
           from2 = fromEnum el2
-          len = fromEnum (maxBound :: a) + 1
+          maxB = fromEnum (maxBound :: a)
+          minB = fromEnum (minBound :: a)
 
 -- This version was just fun to write
 daysTo1 :: (Eq a, Bounded a, Enum a) => a -> a -> Int
@@ -157,7 +159,7 @@ data List1 a = List1 a [a]
 
 -- | This should be list append.
 instance Semigroup (List1 a) where
-    List1 x1 xs1 <> List1 x2 xs2 = List1 x1 (xs1 ++ [x2] ++ xs2)
+    List1 x1 xs1 <> List1 x2 xs2 = List1 x1 (xs1 ++ x2:xs2)
 
 
 {- | Does 'List1' have the 'Monoid' instance? If no then why?
@@ -267,7 +269,7 @@ types that can have such an instance.
 -- instance Functor Gold where
 -- instance Functor Reward where
 instance Functor List1 where
-    fmap fun (List1 x xs) = List1 (fun x) (fun <$> xs)
+    fmap f (List1 x xs) = List1 (f x) (f <$> xs)
 
 instance Functor Treasure where
     fmap _ NoTreasure = NoTreasure
