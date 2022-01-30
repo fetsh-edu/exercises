@@ -98,7 +98,7 @@ weekday to the second.
 
 -- Using this ["trick"](https://t.me/c/1573945457/940) with `forall`
 -- or we could just use Weekday in types as we already have "days" in
--- function name or even put `7` in place for len in 
+-- function name or even put `7` in place for len in
 -- otherwise = len + (from2 - from1) :)
 daysTo :: forall a . (Bounded a, Enum a) => a -> a -> Int
 daysTo el1 el2
@@ -209,8 +209,8 @@ together only different elements.
 Product {getProduct = 6}
 
 -}
-appendDiff3 :: (Monoid a, Eq a) => a -> a -> a -> a
-appendDiff3 a b c = mconcat $ nub [a, b, c]
+appendDiff3 :: (Semigroup a, Eq a) => a -> a -> a -> a
+appendDiff3 a b c = foldr1 (<>) $ nub [a, b, c]
 
 {-
 
