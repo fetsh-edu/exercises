@@ -100,12 +100,14 @@ module Lecture4
     ) where
 
 import Data.List.NonEmpty (NonEmpty (..), nonEmpty)
+import qualified  Data.List.NonEmpty as NE (map)
 import Data.Semigroup (Max (..), Min (..), Semigroup (..), Sum (..))
 import Text.ParserCombinators.ReadP (ReadP, readP_to_S, get, many1, satisfy, string, skipSpaces, eof)
 import Control.Applicative ((<|>))
 import Data.Char (isDigit)
 import Data.Maybe (mapMaybe)
 import System.Environment (getArgs)
+import Data.List (foldl')
 
 {- In this exercise, instead of writing the entire program from
 scratch, you're offered to complete the missing parts.
@@ -284,9 +286,14 @@ implement the next task.
 -}
 
 combineRows :: NonEmpty Row -> Stats
-combineRows (a :| as) = go a as
-    where go !b (c:cs) = rowToStats b <> go c cs
-          go !b []     = rowToStats b
+combineRows (a :| as) = go (rowToStats a) as
+    where go :: Stats -> [Row] -> Stats
+          go !b [] = b
+          go !b (c:cs) = go (b <> rowToStats c) cs 
+--combineRows (a :| as) = foldl' (\b c -> b <> rowToStats c) (rowToStats a) as 
+--combineRows = sconcat . NE.map rowToStats
+
+
 
 {-
 After we've calculated stats for all rows, we can then pretty-print
