@@ -107,7 +107,8 @@ import Control.Applicative ((<|>))
 import Data.Char (isDigit)
 import Data.Maybe (mapMaybe)
 import System.Environment (getArgs)
-import Data.List (foldl')
+import Debug.Trace (trace)
+
 
 {- In this exercise, instead of writing the entire program from
 scratch, you're offered to complete the missing parts.
@@ -289,8 +290,12 @@ combineRows :: NonEmpty Row -> Stats
 combineRows (a :| as) = go (rowToStats a) as
     where go :: Stats -> [Row] -> Stats
           go !b [] = b
-          go !b (c:cs) = go (b <> rowToStats c) cs 
---combineRows (a :| as) = foldl' (\b c -> b <> rowToStats c) (rowToStats a) as 
+          go !b (c:cs) = go (d (rowToStats c <> b)) cs
+          d x = trace ("a: " ++ show x) x
+--          go !b (c:cs) = let b' = b <> rowToStats c in b' `seq` go b' cs
+--          go !b (c:cs) = go (b <> rowToStats c) cs
+--combineRows (a :| as) = foldr (\b c -> rowToStats b <> c ) (rowToStats a) as
+--combineRows (a :| as) = foldl' (\b c -> b <> rowToStats c) (rowToStats a) as
 --combineRows = sconcat . NE.map rowToStats
 
 
