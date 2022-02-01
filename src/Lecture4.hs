@@ -1,3 +1,5 @@
+{-# LANGUAGE StrictData #-}
+{-# LANGUAGE BangPatterns #-}
 {- |
 Module                  : Lecture4
 Copyright               : (c) 2021-2022 Haskell Beginners 2022 Course
@@ -100,9 +102,16 @@ module Lecture4
     , printProductStats
     ) where
 
-import Data.List.NonEmpty (NonEmpty (..))
+import Data.List.NonEmpty (NonEmpty (..), nonEmpty)
+import qualified  Data.List.NonEmpty as NE (map)
 import Data.Semigroup (Max (..), Min (..), Semigroup (..), Sum (..))
-import Text.Read (readMaybe)
+import Text.ParserCombinators.ReadP (ReadP, readP_to_S, get, many1, satisfy, string, skipSpaces, eof)
+import Control.Applicative ((<|>))
+import Data.Char (isDigit)
+import Data.Maybe (mapMaybe)
+import System.Environment (getArgs)
+import Debug.Trace (trace)
+
 
 {- In this exercise, instead of writing the entire program from
 scratch, you're offered to complete the missing parts.
@@ -134,8 +143,28 @@ errors. We will simply return an optional result here.
 🕯 HINT: Use the 'readMaybe' function from the 'Text.Read' module.
 -}
 
+parseMaybe :: ReadP a -> String -> Maybe a
+parseMaybe parser input =
+    case readP_to_S parser input of
+        [] -> Nothing
+        ((result, _):_) -> Just result
+
 parseRow :: String -> Maybe Row
-parseRow = error "TODO"
+parseRow = parseMaybe rowParser
+
+rowParser :: ReadP Row
+rowParser = do
+    productName <- many1 get
+    _ <- satisfy (== ',')
+    skipSpaces
+    trade <- fmap read (string "Buy" <|> string "Sell")
+    skipSpaces
+    _ <- satisfy (== ',')
+    skipSpaces
+    cost <- fmap read (many1 (satisfy isDigit))
+    skipSpaces
+    eof
+    pure (Row productName trade cost)
 
 {-
 We have almost all we need to calculate final stats in a simple and
@@ -157,7 +186,9 @@ string.
 If both strings have the same length, return the first one.
 -}
 instance Semigroup MaxLen where
-
+    (<>) (MaxLen a) (MaxLen b)
+        | length a < length b = MaxLen b
+        | otherwise = MaxLen a
 
 {-
 It's convenient to represent our stats as a data type that has
@@ -184,7 +215,17 @@ instance for the 'Stats' type itself.
 -}
 
 instance Semigroup Stats where
-
+    (<>) a b = Stats
+                { statsTotalPositions = statsTotalPositions a <> statsTotalPositions b
+                , statsTotalSum = statsTotalSum a <> statsTotalSum b
+                , statsAbsoluteMax = statsAbsoluteMax a <> statsAbsoluteMax b
+                , statsAbsoluteMin = statsAbsoluteMin a <> statsAbsoluteMin b
+                , statsSellMax = statsSellMax a <> statsSellMax b
+                , statsSellMin = statsSellMin a <> statsSellMin b
+                , statsBuyMax = statsBuyMax a <> statsBuyMax b
+                , statsBuyMin = statsBuyMin a <> statsBuyMin b
+                , statsLongest = statsLongest a <> statsLongest b
+                }
 
 {-
 The reason for having the 'Stats' data type is to be able to convert
@@ -200,7 +241,30 @@ row in the file.
 -}
 
 rowToStats :: Row -> Stats
-rowToStats = error "TODO"
+rowToStats row = Stats
+    { statsTotalPositions = Sum 1
+    , statsTotalSum = Sum $ sSum (rowTradeType row) $ rowCost row
+    , statsAbsoluteMax = Max $ rowCost row
+    , statsAbsoluteMin = Min $ rowCost row
+    , statsSellMax = sell (rowTradeType row) (Max $ rowCost row)
+    , statsSellMin = sell (rowTradeType row) (Min $ rowCost row)
+    , statsBuyMax = buy (rowTradeType row) (Max $ rowCost row)
+    , statsBuyMin = buy (rowTradeType row) (Min $ rowCost row)
+    , statsLongest = MaxLen $ rowProduct row
+    }
+    where sell tradeType prod =
+              case tradeType of
+                    Buy -> Nothing
+                    Sell -> Just prod
+          buy tradeType prod =
+              case tradeType of
+                    Sell -> Nothing
+                    Buy -> Just prod
+          sSum tradeType =
+                case tradeType of
+                    Buy -> ((-1) *)
+                    Sell -> id
+
 
 {-
 Now, after we learned to convert a single row, we can convert a list of rows!
@@ -226,7 +290,18 @@ implement the next task.
 -}
 
 combineRows :: NonEmpty Row -> Stats
-combineRows = error "TODO"
+combineRows (a :| as) = go (rowToStats a) as
+    where go :: Stats -> [Row] -> Stats
+          go !b [] = b
+          go !b (c:cs) = go (d (rowToStats c <> b)) cs
+          d x = trace ("a: " ++ show x) x
+--          go !b (c:cs) = let b' = b <> rowToStats c in b' `seq` go b' cs
+--          go !b (c:cs) = go (b <> rowToStats c) cs
+--combineRows (a :| as) = foldr (\b c -> rowToStats b <> c ) (rowToStats a) as
+--combineRows (a :| as) = foldl' (\b c -> b <> rowToStats c) (rowToStats a) as
+--combineRows = sconcat . NE.map rowToStats
+
+
 
 {-
 After we've calculated stats for all rows, we can then pretty-print
@@ -237,7 +312,18 @@ you can return string "no value"
 -}
 
 displayStats :: Stats -> String
-displayStats = error "TODO"
+displayStats Stats{..} = unlines stats
+    where stats =
+              [ "Total positions:       : " ++ show (getSum statsTotalPositions)
+              , "Total final balance    : " ++ show (getSum statsTotalSum)
+              , "Biggest absolute cost  : " ++ show (getMax statsAbsoluteMax)
+              , "Smallest absolute cost : " ++ show (getMin statsAbsoluteMin)
+              , "Max earning            : " ++ maybe "no value" (show . getMax) statsSellMax
+              , "Min earning            : " ++ maybe "no value" (show . getMin) statsSellMin
+              , "Max spending           : " ++ maybe "no value" (show . getMax) statsBuyMax
+              , "Min spending           : " ++ maybe "no value" (show . getMin) statsBuyMin
+              , "Longest product name   : " ++ unMaxLen statsLongest
+              ]
 
 {-
 Now, we definitely have all the pieces in places! We can write a
@@ -257,7 +343,10 @@ the file doesn't have any products.
 -}
 
 calculateStats :: String -> String
-calculateStats = error "TODO"
+calculateStats = maybe "file doesn't have any products" (displayStats . combineRows)
+                    . nonEmpty
+                    . mapMaybe parseRow
+                    . lines
 
 {- The only thing left is to write a function with side-effects that
 takes a path to a file, reads its content, calculates stats and prints
@@ -267,7 +356,7 @@ Use functions 'readFile' and 'putStrLn' here.
 -}
 
 printProductStats :: FilePath -> IO ()
-printProductStats = error "TODO"
+printProductStats filePath = readFile filePath >>= putStrLn . calculateStats
 
 {-
 Okay, I lied. This is not the last thing. Now, we need to wrap
@@ -283,7 +372,11 @@ https://hackage.haskell.org/package/base-4.16.0.0/docs/System-Environment.html#v
 -}
 
 main :: IO ()
-main = error "TODO"
+main = do
+   args <- getArgs
+   case args of
+        [a] -> printProductStats a
+        _ -> putStrLn "Error: provide path"
 
 
 {-
