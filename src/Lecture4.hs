@@ -100,14 +100,14 @@ module Lecture4
     ) where
 
 import Data.List.NonEmpty (NonEmpty (..), nonEmpty)
-import qualified  Data.List.NonEmpty as NE (map)
 import Data.Semigroup (Max (..), Min (..), Semigroup (..), Sum (..))
 import Text.ParserCombinators.ReadP (ReadP, readP_to_S, get, many1, satisfy, string, skipSpaces, eof)
 import Control.Applicative ((<|>))
 import Data.Char (isDigit)
 import Data.Maybe (mapMaybe)
 import System.Environment (getArgs)
-import Debug.Trace (trace)
+import Control.Monad ((<=<))
+import Data.List (foldl')
 
 
 {- In this exercise, instead of writing the entire program from
@@ -217,12 +217,14 @@ instance Semigroup Stats where
                 , statsTotalSum = statsTotalSum a <> statsTotalSum b
                 , statsAbsoluteMax = statsAbsoluteMax a <> statsAbsoluteMax b
                 , statsAbsoluteMin = statsAbsoluteMin a <> statsAbsoluteMin b
-                , statsSellMax = statsSellMax a <> statsSellMax b
-                , statsSellMin = statsSellMin a <> statsSellMin b
-                , statsBuyMax = statsBuyMax a <> statsBuyMax b
-                , statsBuyMin = statsBuyMin a <> statsBuyMin b
+                , statsSellMax = apl (statsSellMax a <> statsSellMax b)
+                , statsSellMin = apl (statsSellMin a <> statsSellMin b)
+                , statsBuyMax = apl (statsBuyMax a <> statsBuyMax b)
+                , statsBuyMin = apl (statsBuyMin a <> statsBuyMin b)
                 , statsLongest = statsLongest a <> statsLongest b
                 }
+                where apl Nothing = Nothing
+                      apl (Just !something) = Just something
 
 {-
 The reason for having the 'Stats' data type is to be able to convert
@@ -238,30 +240,26 @@ row in the file.
 -}
 
 rowToStats :: Row -> Stats
-rowToStats row = Stats
+rowToStats Row {..} = Stats
     { statsTotalPositions = Sum 1
-    , statsTotalSum = Sum $ sSum (rowTradeType row) $ rowCost row
-    , statsAbsoluteMax = Max $ rowCost row
-    , statsAbsoluteMin = Min $ rowCost row
-    , statsSellMax = sell (rowTradeType row) (Max $ rowCost row)
-    , statsSellMin = sell (rowTradeType row) (Min $ rowCost row)
-    , statsBuyMax = buy (rowTradeType row) (Max $ rowCost row)
-    , statsBuyMin = buy (rowTradeType row) (Min $ rowCost row)
-    , statsLongest = MaxLen $ rowProduct row
+    , statsTotalSum = Sum (sSum rowCost)
+    , statsAbsoluteMax = Max rowCost
+    , statsAbsoluteMin = Min rowCost
+    , statsSellMax = sell (Max rowCost)
+    , statsSellMin = sell (Min rowCost)
+    , statsBuyMax = buy (Max rowCost)
+    , statsBuyMin = buy (Min rowCost)
+    , statsLongest = MaxLen rowProduct
     }
-    where sell tradeType prod =
-              case tradeType of
-                    Buy -> Nothing
-                    Sell -> Just prod
-          buy tradeType prod =
-              case tradeType of
-                    Sell -> Nothing
-                    Buy -> Just prod
-          sSum tradeType =
-                case tradeType of
-                    Buy -> ((-1) *)
-                    Sell -> id
-
+    where sell = case rowTradeType of
+                Buy -> const Nothing
+                Sell -> Just
+          buy = case rowTradeType of
+                Buy -> Just
+                Sell -> const Nothing
+          sSum = case rowTradeType of
+                Buy -> ((-1) *)
+                Sell -> id
 
 {-
 Now, after we learned to convert a single row, we can convert a list of rows!
@@ -287,18 +285,10 @@ implement the next task.
 -}
 
 combineRows :: NonEmpty Row -> Stats
-combineRows (a :| as) = go (rowToStats a) as
-    where go :: Stats -> [Row] -> Stats
-          go !b [] = b
-          go !b (c:cs) = go (d (rowToStats c <> b)) cs
-          d x = trace ("a: " ++ show x) x
---          go !b (c:cs) = let b' = b <> rowToStats c in b' `seq` go b' cs
---          go !b (c:cs) = go (b <> rowToStats c) cs
---combineRows (a :| as) = foldr (\b c -> rowToStats b <> c ) (rowToStats a) as
---combineRows (a :| as) = foldl' (\b c -> b <> rowToStats c) (rowToStats a) as
---combineRows = sconcat . NE.map rowToStats
+combineRows = combineStats . fmap rowToStats
 
-
+combineStats :: NonEmpty Stats -> Stats
+combineStats (a :| as) = foldl' (<>) a as
 
 {-
 After we've calculated stats for all rows, we can then pretty-print
@@ -340,10 +330,9 @@ the file doesn't have any products.
 -}
 
 calculateStats :: String -> String
-calculateStats = maybe "file doesn't have any products" (displayStats . combineRows)
-                    . nonEmpty
-                    . mapMaybe parseRow
-                    . lines
+calculateStats = maybe "file doesn't have any products"
+                    (displayStats . combineRows)
+                    . nonEmpty . mapMaybe parseRow . lines
 
 {- The only thing left is to write a function with side-effects that
 takes a path to a file, reads its content, calculates stats and prints
@@ -353,7 +342,7 @@ Use functions 'readFile' and 'putStrLn' here.
 -}
 
 printProductStats :: FilePath -> IO ()
-printProductStats filePath = readFile filePath >>= putStrLn . calculateStats
+printProductStats = putStrLn . calculateStats <=< readFile
 
 {-
 Okay, I lied. This is not the last thing. Now, we need to wrap
